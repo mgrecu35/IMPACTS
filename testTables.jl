@@ -24,7 +24,28 @@ temp,mass,fraction,bscat,Deq,ext,scat,g,vfall,
 temp_r,mass_r,bscat_r,Deq_r,ext_r,scat_r,g_r,vfall_r)
 
 include("psdInt_2.jl")
-
+function fromZKuTs(zKuC,dn)
+    zKuC1=zKuC-10*dn
+    n1,n2=bisection(zKuTs,zKuC1)
+    dZ=zKuTs[n2]-zKuTs[n1]+1e-5
+    f=(zKuC1-zKuTs[n1])/dZ
+    attKu=10^dn*((1-f)*attKuTs[n1]+f*attKuTs[n2])
+    attKa=10^dn*((1-f)*attKaTs[n1]+f*attKaTs[n2])
+    zKa=(1-f)*zKaTs[n1]+f*zKaTs[n2]+10*dn
+    pwcRet=10^dn*((1-f)*pwcTs[n1]+f*pwcTs[n2])
+    return attKu,attKa,zKa,pwcRet
+end
+function fromZKuT(zKuC,dn)
+    zKuC1=zKuC-10*dn
+    n1,n2=bisection(zKuT,zKuC1)
+    dZ=zKuTs[n2]-zKuTs[n1]+1e-5
+    f=(zKuC1-zKuT[n1])/dZ
+    attKu=10^dn*((1-f)*attKuT[n1]+f*attKuT[n2])
+    attKa=10^dn*((1-f)*attKaT[n1]+f*attKaT[n2])
+    zKa=(1-f)*zKaT[n1]+f*zKaT[n2]+10*dn
+    pwcRet=10^dn*((1-f)*pwcT[n1]+f*pwcT[n2])
+    return attKu,attKa,zKa, pwcRet
+end
 function attCorrect(zKu,dr,ibbL)
     piaKu=0
     attKu1=0.0
@@ -35,12 +56,10 @@ function attCorrect(zKu,dr,ibbL)
     zeta=0.0
     q=0.2*log(10)
     beta=0.72
+    dn=0.0
     for k=1:ibbL[2]-20
         if zKu[k]==zKu[k] && zKu[k]>0
-            n1,n2=bisection(zKuTs,zKuC[k])
-            dZ=zKuTs[n2]-zKuTs[n1]+1e-5
-            f=(zKu[k]-zKuTs[n1])/dZ
-            attKu=(1-f)*attKuTs[n1]+f*attKuTs[n2]
+            attKu,attKa,zKa,pwcS=fromZKuTs(zKuC[k],dn)
             piaKu=piaKu+2*attKu*dr/1e3
             zeta=zeta+attKu/10.0^(0.1*zKuC[k]*beta)*10.0^(0.1*zKu[k]*beta)*dr/1e3
             zeta1d[k]=zeta
@@ -50,20 +69,14 @@ function attCorrect(zKu,dr,ibbL)
         end
     end
     k=ibbL[2]+20
-    n1,n2=bisection(zKuT,zKuC[k])
-    dZ=zKuTs[n2]-zKuTs[n1]+1e-5
-    f=(zKu[k]-zKuTs[n1])/dZ
-    attKu2=(1-f)*attKuT[n1]+f*attKuT[n2]
+    attKu2,attKa2,zKa2=fromZKuT(zKuC[k],dn)
     for k=ibbL[2]-19:ibbL[2]+19
         zeta=zeta+0.5*(attKu1+attKu2)/10.0^(0.1*zKuC[k]*beta)*10.0^(0.1*zKu[k]*beta)*dr/1e3
         zeta1d[k]=zeta
     end
     for k=ibbL[2]+20:399
         if zKu[k]==zKu[k] && zKu[k]>0
-            n1,n2=bisection(zKuT,zKuC[k])
-            dZ=zKuTs[n2]-zKuTs[n1]+1e-5
-            f=(zKu[k]-zKuTs[n1])/dZ
-            attKu=(1-f)*attKuT[n1]+f*attKuT[n2]
+            attKu,attKa,zKa,pwcR=fromZKuT(zKuC[k],dn)
             piaKu=piaKu+2*attKu*dr/1e3
             zeta=zeta+attKu/10.0^(0.1*zKuC[k]*beta)*10.0^(0.1*zKu[k]*beta)*dr/1e3
             zeta1d[k]=zeta
@@ -81,7 +94,49 @@ function attCorrect(zKu,dr,ibbL)
     piaHB=-10/beta*log10(1-eps*q*beta*zeta1d[nz])
     return zKuC,piaHB,piaKu
 end
+function prof1d(zKuC,zKa,dn,dr)
+    piaKa=0.0
+    nz=size(zKuC)[1]
+    pwcRet=zeros(nz)
+    attKa1=0.0
+    for k=1:ibbL[2]-20
+        if zKu[k]==zKu[k] && zKu[k]>0
+            attKu,attKa,zKa1,pwcS=fromZKuTs(zKuC[k],dn[k])
+            pwcRet[k]=pwcS
+            piaKa=piaKa+2*attKa*dr/1e3
+        else
+            pwcRet[k]=NaN
+        end
+        if k==ibbL[2]-20
+            global snowL=pwcRet[k]
+            global zKaL=zKa1-piaKa
+            global zKaL_obs=zKa[k]
+            attKa1=attKa
+        end
+    end
+    for k=ibbL[2]-19:ibbL[2]+19
+        pwcRet[k]=NaN
+    end
 
+    for k=ibbL[2]+20:399
+        if zKu[k]==zKu[k] && zKu[k]>0
+            attKu,attKa,zKa1,pwcR=fromZKuT(zKuC[k],dn[k])
+            piaKa=piaKa+2*attKa*dr/1e3
+            pwcRet[k]=pwcR
+        else
+            pwcRet[k]=NaN
+        end
+        if k==ibbL[2]+20
+            piaKa=piaKa+2*0.5*(attKa1+attKa)*38*dr/1e3
+            global rainL=pwcR
+        end
+        if k==399
+            global zKaLsfc=zKa1-piaKa
+            global zKaLsfc_obs=zKa[k]
+        end
+    end
+    return pwcRet,piaKa,rainL,snowL,zKaL,zKaLsfc,zKaL_obs,zKaLsfc_obs
+end
 function retrieve(impactsData)
     pwcRet=zeros(300,399)
     dr=26.25
@@ -92,6 +147,7 @@ function retrieve(impactsData)
     zKaLsfc=zeros(300)
     zKaLsfc_obs=zeros(300)
     piaKaL=zeros(300)
+    dn=zeros(399)
     for i=1:1:300
         global zKu,zKa,ibbL
         zKu=impactsData[1][i,1:1:end]
@@ -104,63 +160,32 @@ function retrieve(impactsData)
         piaKa=0
         attKa1=0.0
         attKa2=0
-        for k=1:ibbL[2]-20
-            if zKu[k]==zKu[k] && zKu[k]>0
-                n1,n2=bisection(zKuTs,zKuC[k])
-                #println("$(zKu[k]) $(n1) $(n2)")
-                dZ=zKuTs[n2]-zKuTs[n1]+1e-5
-                f=(zKu[k]-zKuTs[n1])/dZ
-                pwcRet[i,k]=(1-f)*pwcTs[n1]+f*pwcTs[n2]
-                attKa=(1-f)*attKaTs[n1]+f*attKaTs[n2]
-                piaKa=piaKa+2*attKa*dr/1e3
-            else
-                pwcRet[i,k]=NaN
-            end
-            if k==ibbL[2]-20
-                snowL[i]=pwcRet[i,k]
-                zKa1=(1-f)*zKaTs[n1]+f*zKaTs[n2]
-                zKaL[i]=zKa1-piaKa
-                zKaL_obs[i]=zKa[k]
-                attKa1=attKa
-            end
-        end
-        for k=ibbL[2]-19:ibbL[2]+19
-            pwcRet[i,k]=NaN
-        end
-
-        for k=ibbL[2]+20:399
-            if zKu[k]==zKu[k] && zKu[k]>0
-                n1,n2=bisection(zKuT,zKuC[k])
-            #println("$(zKu[k]) $(n1) $(n2)")
-                dZ=zKuTs[n2]-zKuTs[n1]+1e-5
-                f=(zKu[k]-zKuTs[n1])/dZ
-                pwcRet[i,k]=(1-f)*pwcT[n1]+f*pwcT[n2]
-                attKa=(1-f)*attKaT[n1]+f*attKaT[n2]
-                piaKa=piaKa+2*attKa*dr/1e3
-            else
-                pwcRet[i,k]=NaN
-            end
-            if k==ibbL[2]+20
-                piaKa=piaKa+2*0.5*(attKa1+attKa)*40*dr/1e3
-                rainL[i]=pwcRet[i,k]
-            end
-            if k==399
-                zKa1=(1-f)*zKaT[n1]+f*zKaT[n2]
-                zKaLsfc[i]=zKa1-piaKa
-                zKaLsfc_obs[i]=zKa[k]
-            end
-        end
+        pwcRet1d,piaKa,rainSfc,snowBB,zKa1,zKa1sfc,zKa1_obs,zKa1sfc_obs=
+        prof1d(zKuC,zKa,dn,dr)
         piaKaL[i]=piaKa
+        snowL[i]=snowBB
+        rainL[i]=rainSfc
+        zKaL_obs[i]=zKa1_obs
+        pwcRet[i,:].=pwcRet1d
     end
     return pwcRet,snowL,rainL,zKaL_obs,zKaL, zKaLsfc, zKaLsfc_obs,piaKaL
 end
 pwcRet,snowL,rainL,zKaL_obs,zKaL, zKaLsfc, zKaLsfc_obs,piaKaL=retrieve(impactsData)
 np=pyimport("numpy")
 ma=pyimport("numpy.ma")
+matplot=pyimport("matplotlib.colors")
 pwcRetT=copy(transpose(pwcRet))
 pwcRetTm=ma["masked_equal"](pwcRetT,0)
 plt=pyimport("matplotlib.pyplot")
 h=impactsData[end-1].-impactsData[end]
-plt["pcolormesh"](1:300,h,pwcRetTm[:,1:1:end],cmap="jet",vmin=0.001)
-plt["colorbar"]()
+h.=h/1000.0
+plt["figure"](figsize=(8,6))
+norm=matplot["LogNorm"]()
+plt["pcolormesh"](1:300,h,pwcRetTm[:,1:1:end],cmap="jet",vmin=0.1,vmax=2,norm=norm)
+c=plt["colorbar"]()
+c["ax"]["set_title"]("g/m^3")
+plt["xlabel"]("Profile #")
+plt["ylabel"]("Height(km)")
+plt["savefig"]("impacts0201.png")
+
 #plt["show"]()
