@@ -108,6 +108,7 @@ function getDmNwR(tempKu::Array{Float32,1},massKu::Array{Float32,2},fractionKu::
             gradDm=(dm1-dm)/(log(dn1/dn))
             dnRet=dn*exp(1.0*(dmc-dm)*gradDm/(gradDm*gradDm+0.000001))
         end
+        #dnRet=0.1
         retZ=get_fZr(zObs1,bscatKu_r,scatKu_r,extKu_r,gKu_r,DeqKu_r,vfallKu_r,wlKu,dnRet,mu)
         rwc, Z, att,scatInt,gInt, vdop, dm=retZ
         pwcT[i]=rwc
@@ -207,6 +208,7 @@ function getDmNwSF(tempKu::Array{Float32,1},massKu::Array{Float32,2},fractionKu:
             gradDm=(dm1-dm)/(log(dn1/dn))
             dnRet=dn*exp(1.0*(dmc-dm)*gradDm/(gradDm*gradDm+0.000001))
         end
+        #dnRet=0.1
         retZ=get_fZs(zObs1,ns,bscatKu,scatKu,extKu,gKu,DeqKu,DeqKu_r,vfallKu,vfallKu_r,wlKu,dnRet,mu)
         rwc, Z, att,scatInt,gInt, vdop, dm=retZ
         pwcTs[i]=rwc

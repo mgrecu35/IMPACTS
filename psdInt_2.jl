@@ -5,10 +5,10 @@ include("psdInt.jl")
 function bisection(xn,x)
     n=size(xn)[1]
     if x<xn[1]
-        return 1-1,1-1
+        return 1,1
     end
     if x>xn[n]
-        return n-1,n-1
+        return n,n
     end
     n1=1
     n2=n
