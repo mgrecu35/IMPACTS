@@ -30,6 +30,48 @@ nw[nw<6.5]=6.5
 swcL=[]
 hsurf=[]
 zsurf=[]
+
+from numba import jit
+
+@jit(nopython=True)
+def bisection(xr,xvec):
+    n=xvec.shape[0]
+    if xr<=xvec[0]:
+        i1,i2=0,0
+        return i1,i2
+    if xr>=xvec[n-1]:
+        i1,i2=n-1,n-1
+        return i1,i2
+    i1=0
+    x1=xvec[i1]
+    i2=n-1
+    x2=xvec[i2]
+    while i2-i1>1:
+        imid=int((i1+i2)/2)
+        if xvec[imid]>xr:
+            i2=imid
+        else:
+            i1=imid
+    return i1,i2
+xvec=np.arange(10)
+i1,i2=0,9
+i1,i2=bisection(4.1,xvec)
+from zprofTest import *
+kuka_Table['dFR']=np.array(kuka_Table['zKu'])-np.array(kuka_Table['zKa'])
+
+dFR_Table=kuka_Table['dFR']
+dm_Table=np.array(kuka_Table['dm'])
+dFR=np.array(dFR)
+dmRet=dFR.copy()*0
+@jit(nopython=True)
+def fromdfr(dFR,dmRet,dFR_table,dm_Table):
+    n=dFR.shape[0]
+    for i in range(n):
+        i1,i2=bisection(dFR[i],dFR_table)
+        dmRet[i]=dm_Table[i1]
+        
+fromdfr(dFR,dmRet,dFR_Table,dm_Table)
+stop
 for i in range(nx):
     ind=np.argmax(zKu_slice[i,500:-30])
     swc1=np.zeros((nr),float)-99
