@@ -143,10 +143,26 @@ def calcSnowProp(swc,nws,scatTables,mu,freq):
     ns=12
     get_Z(swc,nw,lambds,swc_out,Z,att,dm,Deq[ns,:],bscat[-1,ns,:],ext[-1,ns,:],\
           vfall[ns,:],mu,wl)
+    
+    print(nw/n0)
+    nw=n0.copy()
+    nw_s_out=swc.copy()*0.0
+    kext_s=swc.copy()*0.0
+    kscat_s=swc.copy()*0.0
+    g_fact_s=swc.copy()*0.0
+    dm_s=swc.copy()*0.0
+    Ws=swc.copy()*0.0
+    wl=300/freq
+
+    #ns=12
+    get_scatt(Ws,nw,lambds,nw_s_out,kext_s,kscat_s,g_fact_s,dm_s,Deq[ns,:],\
+              ext[-1,ns,:],scat[-1,ns,:],g[-1,ns,:],vfall[ns,:],mu,wl)
+    #print(ws,swc)
+    #print(kext_s)
     print(swc)
     print(swc_out)
-    print(nw/n0)
-    return Z,dm
+    #stop
+    return Z,dm, dm_s, kext_s, kscat_s, g_fact_s
     #Deq[ns,:],\
     #          ext[-1,ns,:],scat[-1,ns,:],g[-1,ns,:],vfall[ns,:],mu,wl
     
