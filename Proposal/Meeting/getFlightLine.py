@@ -21,21 +21,21 @@ dbinsI=(mass*6/pi)**(1./3.)*10.
 import pytmatrix.refractive
 wl=[pytmatrix.refractive.wl_Ku,pytmatrix.refractive.wl_Ka,pytmatrix.refractive.wl_W]
 
-from readDDA import *
+from readDDArho import *
 
 mass=0.0042*(1e-4*dbins)**2.04
 sback95=(wl[2]**4/pi**5)*sigma_w_av*1e6
 sback37=(wl[1]**4/pi**5)*sigma_ka_av*1e6
 sback13=(wl[0]**4/pi**5)*sigma_ku_av*1e6
 
-d=pickle.load(open("sigmaRH_ob.pklz","rb"))
-mass_av=d["mass"]
-sigma=d["sigma"]
+#d=pickle.load(open("sigmaRH_ob.pklz","rb"))
+#mass_av=d["mass"]
+#sigma=d["sigma"]
 
-mass=0.0061*(1e-4*dbins)**2.05
-sback95=(wl[2]**4/pi**5)*sigma[:,2]*1e6
-sback37=(wl[1]**4/pi**5)*sigma[:,1]*1e6
-sback13=(wl[0]**4/pi**5)*sigma[:,0]*1e6
+#mass=0.0061*(1e-4*dbins)**2.05
+#sback95=(wl[2]**4/pi**5)*sigma[:,2]*1e6
+#sback37=(wl[1]**4/pi**5)*sigma[:,1]*1e6
+#sback13=(wl[0]**4/pi**5)*sigma[:,0]*1e6
 
 #ext95=0.5*(10**luo_Tables[0][1]+10**luo_Tables2[0][1])
 #ext37=0.5*(10**luo_Tables[1][1]+10**luo_Tables2[1][1])
@@ -79,7 +79,7 @@ import random
 
 def getinfo(t1,t2):
     zSims=[]
-    choiceL=range(400)
+    choiceL=range(45)
     info1=[]
     info2=[]
     for fname in fileList[:]:
@@ -102,22 +102,22 @@ def getinfo(t1,t2):
             iwc_psL=[]
             for it in range(1):
                 ik=random.choice(choiceL)
-                ik=1
-                dm=sum(Nbins*ds*mass_av[:]*dbinsM)/sum(Nbins*ds*mass_av[:])
-                iwc_ps=sum(Nbins*ds*mass_av[:])*1e-3
+                ik=15
+                dm=sum(Nbins*ds*mass_av[:,ik]*dbinsM)/sum(Nbins*ds*mass_av[:,ik])
+                iwc_ps=sum(Nbins*ds*mass_av[:,ik])*1e-3
                 Z1=log10(sum(Nbins*ds*1e-6*(dbinsI)**6*xf1)*K2r[0]/K2)*10.
                 Z2=log10(sum(Nbins*ds*1e-6*(dbinsI)**6*xf2)*K2r[1]/K2)*10.
                 Z3=log10(sum(Nbins*ds*1e-6*(dbinsI)**6*xf3)*K2r[2]/K2)*10.
-                Z1_dda=log10(sum(Nbins*1e-6*ds*sback13[:]/K2))*10.
-                Z3_dda=log10(sum(Nbins*1e-6*ds*sback95[:]/K2))*10.
-                Z2_dda=log10(sum(Nbins*1e-6*ds*sback37[:]/K2))*10.
+                Z1_dda=log10(sum(Nbins*1e-6*ds*sback13[:,ik]/K2))*10.
+                Z3_dda=log10(sum(Nbins*1e-6*ds*sback95[:,ik]/K2))*10.
+                Z2_dda=log10(sum(Nbins*1e-6*ds*sback37[:,ik]/K2))*10.
                 zSims.append([Z1_dda,Z2_dda,Z3_dda,dm,Z1,Z2,Z3,iwc_a[i],iwc_ps])
                 iwc_psL.append(iwc_ps)
             
                 if dtime[i]>t1 and dtime[i]<t2:
                     print(dtime[i],galt[i],iwc_a[i],i,std(iwc_psL),mean(iwc_psL))
                     info1.append([dtime[i],lon[i],lat[i],galt[i],iwc_a[i],i])
-                    info2.append([Z1_dda,Z2_dda,Z3_dda,dm,Z1,Z2,Z3,iwc_a[i],min(iwc_psL)])
+                    info2.append([Z1,Z2,Z3,dm,Z1,Z2,Z3,iwc_a[i],min(iwc_psL)])
             
         print(iL)
         zSims=np.array(zSims)

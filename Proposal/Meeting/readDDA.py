@@ -59,27 +59,14 @@ from scattering import *
 mass=0.0042*(1e-4*dbins)**2.04
 massInt=0.0042*(1e-4*dint)**2.04
 
-sigma_ku_av=np.zeros((42,40),float)
-sigma_ka_av=np.zeros((42,40),float)
-sigma_w_av=np.zeros((42,40),float)
-kext_ku_av=np.zeros((42,40),float)
-kext_ka_av=np.zeros((42,40),float)
-kext_w_av=np.zeros((42,40),float)
-mass_av=np.zeros((42,40),float)
-[temp,massS,fraction,bscat,Deq,ext,scat,g,vfall,\
-                           temp_r,mass_r,bscat_r,Deq_r,ext_r,scat_r,g_r,vfall_r]=scatTables['13.8']
-#sigma_ku_av=np.interp(massB,massS[12,:]*1e3,bscat[-1,12,:])
-
-[temp,massS,fraction,bscat,Deq,ext,scat,g,vfall,\
-                           temp_r,mass_r,bscat_r,Deq_r,ext_r,scat_r,g_r,vfall_r]=scatTables['35.5']
-
-#sigma_ka_av=np.interp(massB,massS[12,:]*1e3,bscat[-1,12,:])
-
-[temp,massS,fraction,bscat,Deq,ext,scat,g,vfall,\
-                           temp_r,mass_r,bscat_r,Deq_r,ext_r,scat_r,g_r,vfall_r]=scatTables['89']
-#sigma_w_av=np.interp(massB,massS[12,:]*1e3,bscat[-1,12,:])
-
-#stop
+sigma_ku_av=np.zeros((42,45),float)
+sigma_ka_av=np.zeros((42,45),float)
+sigma_w_av=np.zeros((42,45),float)
+kext_ku_av=np.zeros((42,45),float)
+kext_ka_av=np.zeros((42,45),float)
+kext_w_av=np.zeros((42,45),float)
+mass_av=np.zeros((42,45),float)
+vol_av=np.zeros((42,45),float)
 import random
 from bhmief import bhmie
 import pytmatrix.refractive
@@ -104,18 +91,35 @@ for i in range(42):
     print(len(a[0]),len(b[0]))
     #print((vL[a[0],1]*1e3).std()/(vL[a[0],1]*1e3).mean(),(vL[a[0],1]*1e3).mean())
     rho1L=[]
-    for k in range(6):
+    for k in range(45):
         if len(b[0])<=1:
             ik=random.choices(a[0],k=5)
         else:
-            ik=random.choices(a[0],k=5)
+            ik=random.choices(a[0][b],k=5)
         sigma_ku_av[i,k]=vL[ik,2].mean(axis=0)
         sigma_ka_av[i,k]=vL[ik,3].mean(axis=0)
         sigma_w_av[i,k]=vL[ik,4].mean(axis=0)
         mass_av[i,k]=vL[ik,1].mean(axis=0)
-        
-        if k<6:
-            n1=int(len(a[0])/6)
+        vol_av[i,k]=(vL[ik,0]**3).mean()
+        mass1=mass_av[i,k]
+        dmax1=vL[ik,0].mean()
+        rho1=mass1/(np.pi*dmax1**3/6)
+        #rho1L.append(rho1)
+        rho1=rho1*1e-3
+        rho1=max(rho1,0.01)
+        sigmaKu_mie,kextKu_mie=getsigma_mie(refr,wl[0],rho1,mass1)
+        sigmaKa_mie,kextKa_mie=getsigma_mie(refr,wl[1],rho1,mass1)
+        sigmaW_mie,kextW_mie=getsigma_mie(refr,wl[2],rho1,mass1)
+        kext_ku_av[i,:]=kextKu_mie
+        kext_ka_av[i,:]=kextKa_mie
+        kext_w_av[i,:]=kextW_mie
+        rn=np.random.random()
+        rn=0.85+0.15*rn
+        sigma_ku_av[i,k]=rn*sigma_ku_av[i,k]+(1-rn)*sigmaKu_mie
+        sigma_ka_av[i,k]=rn*sigma_ka_av[i,k]+(1-rn)*sigmaKa_mie
+        sigma_w_av[i,k]=rn*sigma_w_av[i,k]+(1-rn)*sigmaW_mie
+        if k<-7:
+            n1=int(len(a[0])/7)
             ind=np.argsort(vL[a[0],3])
             sigma_ku_av[i,k]=vL[a[0][ind[k*n1:k*n1+n1]],2].mean()
             sigma_ka_av[i,k]=vL[a[0][ind[k*n1:k*n1+n1]],3].mean()
@@ -130,15 +134,13 @@ for i in range(42):
             sigmaKu_mie,kextKu_mie=getsigma_mie(refr,wl[0],rho1,mass1)
             sigmaKa_mie,kextKa_mie=getsigma_mie(refr,wl[1],rho1,mass1)
             sigmaW_mie,kextW_mie=getsigma_mie(refr,wl[2],rho1,mass1)
-        if k==1:
-            sigma_ku_av[i,6]=sigmaKu_mie
-            sigma_ka_av[i,6]=sigmaKa_mie
-            sigma_w_av[i,6]=sigmaW_mie
-            kext_ku_av[i,:]=kextKu_mie
-            kext_ka_av[i,:]=kextKa_mie
-            kext_w_av[i,:]=kextW_mie
-            mass_av[i,6]=mass1
-    print(rho1L)
+        #if k==1:
+            
+            #sigma_ku_av[i,7]=sigmaKu_mie
+            #sigma_ka_av[i,7]=sigmaKa_mie
+            #sigma_w_av[i,7]=sigmaW_mie
+        
+            #print(rho1L)
         
     print(np.corrcoef(vL[a[0],1]**(0.333),vL[a[0],1]))
         #print(ik)
@@ -151,16 +153,3 @@ for i in range(42):
     #      mass_sorted[20]/vL[a[0],1].mean(),mass_sorted[380]/vL[a[0],1].mean())
     #stop
 
-import matplotlib
-plt.hist2d(np.log(vL[:,1]),np.log(vL[:,2]),bins=(-25+np.arange(90)*0.2,-45+np.arange(90)*0.4),norm=matplotlib.colors.LogNorm())
-plt.figure()
-plt.hist2d(np.log(vL[:,1]),np.log(vL[:,3]),bins=(-25+np.arange(90)*0.2,-40+np.arange(90)*0.4),norm=matplotlib.colors.LogNorm())
-plt.figure()
-plt.hist2d(np.log(vL[:,1]),np.log(vL[:,4]),bins=(-25+np.arange(90)*0.2,-38+np.arange(90)*0.4),norm=matplotlib.colors.LogNorm())
-
-plt.figure()
-plt.hist2d(np.log(vL[:,0]),np.log(vL[:,2]),bins=(-11+np.arange(90)*0.1,-45+np.arange(90)*0.4),norm=matplotlib.colors.LogNorm())
-plt.figure()
-plt.hist2d(np.log(vL[:,0]),np.log(vL[:,3]),bins=(-11+np.arange(90)*0.1,-40+np.arange(90)*0.4),norm=matplotlib.colors.LogNorm())
-plt.figure()
-plt.hist2d(np.log(vL[:,0]),np.log(vL[:,4]),bins=(-11+np.arange(90)*0.1,-38+np.arange(90)*0.4),norm=matplotlib.colors.LogNorm())

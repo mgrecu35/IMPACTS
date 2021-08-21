@@ -10,7 +10,6 @@ fileList=['PSDs/IMPACTS_MergedHorizontal-P3_20200118_sizedistributions_v01.nc',
           'PSDs/IMPACTS_MergedVertical-P3_20200207_sizedistributions_v01.nc',
           'PSDs/IMPACTS_MergedVertical-P3_20200220_sizedistributions_v01.nc',
           'PSDs/IMPACTS_MergedVertical-P3_20200213_sizedistributions_v01.nc',
-          'PSDs/IMPACTS_MergedVertical-P3_20200224_sizedistributions_v01.nc',
           'PSDs/IMPACTS_MergedVertical-P3_20200218_sizedistributions_v01.nc']
 from netCDF4 import Dataset
 fh=Dataset(fileList[0])
@@ -36,7 +35,7 @@ dbinsI=(mass*6/pi)**(1./3.)*10.
 import pytmatrix.refractive
 wl=[pytmatrix.refractive.wl_Ku,pytmatrix.refractive.wl_Ka,pytmatrix.refractive.wl_W]
 
-from readDDA import *
+from readDDArho import *
 
 mass=0.0042*(1e-4*dbins)**2.04
 sback95=(wl[2]**4/pi**5)*sigma_w_av*1e6
@@ -81,10 +80,18 @@ xf3=(1+0.159*xW3**2)/(1+(0.159+1./3)*xW3**2+0.164*xW3**4);
 zSims=[]
 datL=[]
 import random
-choiceL=range(7)
+choiceL=range(45)
 kextL=[]
+vol_av=vol_av*np.pi/6
+rhoL=[]
+iwcL=[]
+tempL=[]
 for fname in fileList[:]:
     fh=Dataset(fname)
+    date=fname.split("_")[2]
+    fnameT="PSDs/temp_%s.nc"%date
+    fhT=Dataset(fnameT)
+    tempC=fhT["tempC"][:]
     #if '0205' not in fname:
     #    continue
     c=fh['CONCENTRATION'][:,:].T
@@ -95,26 +102,44 @@ for fname in fileList[:]:
         Nbins=c[i,:].data
         if Nbins.min()<0 or Nbins.sum()<1e-3:
             continue
-
-        for it in range(1):
-            iL+=1
-            ik=random.choice(choiceL)
+        if tempC[i]<-998:
+            continue
+        if tempC[i]>0:
+            continue
+        #iwc_psL=[]
+        #for ik in range(45):
+        #    iwc_ps=sum(Nbins*ds*mass_av[:,ik])*1e-3
+        #    iwc_psL.append(iwc_ps)
+        #iwcL1=[iwc_a[i]]
+        #iwcL1.extend(iwc_psL)
+        #iwcL.append(iwcL1)
+        for it in range(2):
+            
+            #ik=np.argmin(abs(iwc_a[i]-np.array(iwc_ps)))
+            #a=np.nonzero((iwc_a[i]-2*np.array(iwc_ps))*(iwc_a[i]-0.1*np.array(iwc_ps)))
+            #if len(a[0])>0:
+            ik=random.choice(range(45))
             #ik=6
             #Nbins=array(dat1[3:])
             dm=sum(Nbins*ds*mass_av[:,ik]*dbinsM)/sum(Nbins*ds*mass_av[:,ik])
             iwc_ps=sum(Nbins*ds*mass_av[:,ik])*1e-3
+            rho=sum(Nbins*ds*mass_av[:,ik])/sum(Nbins*ds*vol_av[:,ik])
             Z1=log10(sum(Nbins*ds*1e-6*(dbinsI)**6*xf1)*K2r[0]/K2)*10.
             Z2=log10(sum(Nbins*ds*1e-6*(dbinsI)**6*xf2)*K2r[1]/K2)*10.
             Z3=log10(sum(Nbins*ds*1e-6*(dbinsI)**6*xf3)*K2r[2]/K2)*10.
-            Z1_dda=log10(sum(Nbins*1e-6*ds*sback13[:,ik]/K2))*10.
-            Z3_dda=log10(sum(Nbins*1e-6*ds*sback95[:,ik]/K2))*10.
-            Z2_dda=log10(sum(Nbins*1e-6*ds*sback37[:,ik]/K2))*10.
+            Z1_dda=log10(sum(Nbins*1e-6*ds*sback13[:,ik]/K2))*10.+0.5*np.random.randn()
+            Z3_dda=log10(sum(Nbins*1e-6*ds*sback95[:,ik]/K2))*10.+0.5*np.random.randn()
+            Z2_dda=log10(sum(Nbins*1e-6*ds*sback37[:,ik]/K2))*10.+0.5*np.random.randn()
             kext35=4.34*sum(Nbins*ds*1e-6*kext_ka_av[:,ik])*1e3
             kext95=4.34*sum(Nbins*ds*1e-6*kext_w_av[:,ik])*1e3
             kext13=4.34*sum(Nbins*ds*1e-6*kext_ku_av[:,ik])*1e3
+            if abs(iwc_ps/(iwc_a[i]+1e-5)-1)>1.50:
+                continue
+            iL+=1
             kextL.append([kext13,kext35,kext95])
             zSims.append([Z1_dda,Z2_dda,Z3_dda,dm,Z1,Z2,Z3,iwc_a[i],iwc_ps])
-        
+            rhoL.append(rho)
+            tempL.append(tempC[i])
     print(iL)
             #stop
 
@@ -226,3 +251,9 @@ def readAH2(fname):
     return array(datL), array(nbinsL), sback95, sback13, sback37, K2, ds
 
 #datAH=readAH()
+import pickle
+pickle.dump({"zSims":zSims,"kextL":kextL,"rhoL":rhoL,"iwcL":iwcL,\
+             "tempC":tempL},open("simulatedPropFilteredTemp.pklz","wb"))
+
+pickle.dump({"zSims":zSims,"kextL":kextL,"rhoL":rhoL,"iwcL":iwcL,\
+             "tempC":tempL},open("simulatedPropSortedTemp_2.pklz","wb"))
