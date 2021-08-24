@@ -4,6 +4,21 @@ import numpy as np
 fname='/media/grecu/ExtraDrive1/IMPACTS/IMPACTS_HIWRAP_L1B_RevA_20200227T074338_to_20200227T142238.h5'
 fname='/media/grecu/ExtraDrive1/IMPACTS/IMPACTS2020_HIWRAP_L1B_RevB_20200205.h5'
 
+#fname='/media/grecu/ExtraDrive1/IMPACTS/IMPACTS_HIWRAP_L1B_RevA_20200207T122221_to_20200207T180045.h5'
+fname='/media/grecu/ExtraDrive1/IMPACTS/IMPACTS_HIWRAP_L1B_RevA_20200125T181952_to_20200126T003040.h5'
+
+fhH=Dataset(fname)
+lat=fhH['Navigation/Data/Latitude'][:]
+lon=fhH['Navigation/Data/Longitude'][:]
+import datetime
+dt=(datetime.datetime(2020,1,25)-datetime.datetime(1970,1,1)).days*24*3600
+time=(fhH['Time/Data/TimeUTC'][:]-dt)/3600.
+
+fileList=['PSDs/IMPACTS_MergedHorizontal-P3_20200125_sizedistributions_v01.nc']
+fh=Dataset(fileList[0])
+latp=fh['LAT'][:]
+lonp=fh['LON'][:]
+
 fname_merra='https://goldsmr5.gesdisc.eosdis.nasa.gov/opendap/MERRA2/M2I3NPASM.5.12.4/2020/02/MERRA2_400.inst3_3d_asm_Np.20200205.nc4'
 import json
 import pickle
@@ -65,7 +80,7 @@ for freq in [95.0]:#freqs:
 
 #kext_atmL2=np.array(kext_atmL2)
 #stop
-fhH=Dataset(fname)
+
 #from scatteringRet import *
 #from dualFreqRetr import *
 zKu=fhH['Products/Ku/Combined/Data/dBZe'][:]
@@ -74,13 +89,15 @@ lat=fhH['Navigation/Data/Latitude']
 lon=fhH['Navigation/Data/Longitude']
 alt=fhH['Navigation/Data/Height'][:]
 rrange=fhH['/Products/Information/Range']
-import datetime
-dz=1.0
-dt=(datetime.datetime(2020,2,5)-datetime.datetime(1970,1,1)).days*24*3600
-time=(fhH['Time/Data/TimeUTC'][:]-dt)/3600.
 
-ap3=np.nonzero((time-21.95)*(time-22.99)<0)
-rmean=rrange[:]
+dz=1.0
+
+time=(fhH['Time/Data/TimeUTC'][:]-dt)[:,0]/3600.
+t1,t2=14+35/60.,14+50/60.
+t1,t2=21+10/60.,21+19/60.
+#t1,t2=15+55/60.,16+15/60.
+ap3=np.nonzero((time-t1)*(time-t2)<0)
+rmean=rrange[0,:]
 
 t_env=np.interp((alt.mean()-rmean[:550])[::-1],h1d[7,1:25],t1d[7,1:25])[::-1]
 kext_env=np.interp((alt.mean()-rmean[:576])[::-1],h1L,kext1)[::-1]
@@ -97,15 +114,8 @@ model = tf.keras.models.load_model('./Chase_et_al_2021_NN-master/' + 'NN_6by8.h5
 
 iwc_model = tf.keras.models.load_model('iwc_model.h5')
 
-for i1 in zip(ap3[0]):
-    ak=np.nonzero((alt[i1]-rmean-3000)*(alt[i1]-rmean-4000)<0)
-    for k in ak[0]:
-        if zKu[i1,k]>24:
-            #print(zKu[i1,k])
-            zKu[i1,k]=24
 
-
-a=np.nonzero((time-21.7)*(time-22.2)<0)
+a=np.nonzero((time-t1)*(time-t2)<0)
 
 zKa_slice=zKa[a[0],:]+dz
 zKu_slice=zKu[a[0],:]+dz
@@ -116,38 +126,50 @@ nx=zKa_slice.shape[0]
 lon_a=lon[a[0]]
 lat_a=lat[a[0]]
 
-a1=np.nonzero(zKu_slice[900:1900,300:(192*3-35)]>30)
-for i1,j1 in zip(a1[0],a1[1]):
-    zKu_slice[i1+900,j1+300]=30
+#a1=np.nonzero(zKu_slice[900:1900,300:(192*3-35)]>30)
+#for i1,j1 in zip(a1[0],a1[1]):
+#    zKu_slice[i1+900,j1+300]=30
 
 
+plt.figure(figsize=(8,12))
+plt.subplot(211)
+plt.pcolormesh(time[a[0]],hm-rmean[300:(192*3-35)],(zKu_slice[:,300:(192*3-35)]).T,cmap='jet',vmin=0,vmax=35)
+plt.xlim(time[a[0][0]],time[a[0][-1]])
+plt.title('Observed Ku  reflectivity\n 05 February 2020')
+plt.ylim(0,8000)
+plt.colorbar()
+plt.subplot(212)
+plt.pcolormesh(time[a[0]],hm-rmean[300:(192*3-35)],(zKa_slice[:,300:(192*3-35)]).T,cmap='jet',vmin=0,vmax=35)
+plt.xlim(time[a[0][0]],time[a[0][-1]])
+plt.title('Observed Ka  reflectivity')
+plt.ylim(0,8000)
+plt.colorbar()
+
+from getFlightLine0207 import getinfo
+info1,info2=getinfo(t1,t2)
+
+plt.figure()
+plt.plot(lon[a[0][:]],lat[a[0][:]]+0.01)
+info1=np.array(info1)
+plt.plot(info1[:,1],info1[:,2])
+info2=np.array(info2)
+
+stop
 plt.subplot(111)
 plt.pcolormesh(time[a[0]],hm-rmean[:192*3],(zKu_slice[:,:192*3]-zKa_slice[:,:192*3]).T,cmap='jet',vmin=0,vmax=10)
-plt.xlim(time[a[0][1050]],time[a[0][3500]])
+plt.xlim(time[a[0][0]],time[a[0][-1]])
 plt.title('Observed DFR\n 05 February 2020')
 plt.ylim(0,8000)
 plt.colorbar()
 
-from getFlightLine import getinfo
-t1,t2=21.7,22.15
-info1,info2=getinfo(t1,t2)
 
-plt.figure(figsize=(8,12))
-plt.subplot(211)
-plt.pcolormesh(time[a[0]],hm-rmean[300:(192*3-35)],(zKu_slice[:,300:(192*3-35)]).T,cmap='jet',vmin=0,vmax=30)
-plt.xlim(time[a[0][1050]],time[a[0][3500]])
-plt.title('Observed Ku  reflectivity\n 05 February 2020')
-plt.plot([21.952,21.964],[3300,3300])
-plt.ylim(0,8000)
-plt.colorbar()
-plt.subplot(212)
-plt.pcolormesh(time[a[0]],hm-rmean[300:(192*3-35)],(zKa_slice[:,300:(192*3-35)]).T,cmap='jet',vmin=0,vmax=30)
-plt.xlim(time[a[0][1050]],time[a[0][3500]])
-plt.title('Observed Ka  reflectivity')
-plt.ylim(0,8000)
-plt.colorbar()
-stop
-#stop
+
+
+
+
+
+
+
 
 
 
@@ -164,7 +186,7 @@ lonCRS=fCRS['Navigation/Data/Longitude']
 altCRS=fCRS['Navigation/Data/Height']
 rrangeCRS=fCRS['/Products/Information/Range']
 timeCRS=(fCRS['Time/Data/TimeUTC'][:]-dt)/3600.
-aC=np.nonzero((timeCRS[:,0]-21.7)*(timeCRS[:,0]-22.2)<0)
+aC=np.nonzero((timeCRS[:,0]-21.14)*(timeCRS[:,0]-21.51)<0)
 hmCRS=altCRS[a[0]].mean()
 rmeanCRS=rrangeCRS[:]
 zW_slice=zW[aC[0],:]
@@ -174,17 +196,17 @@ zwm1=np.zeros((54),float)
 zwm2=np.zeros((54),float)
 count=np.zeros((54),float)
 zW_L=[]
-for i1 in a[0][200:3500]:
+for i1 in a[0][:]:
     ind=np.argmin(abs(timeCRS[aC[0]]-time[i1]))
     zw1=np.interp((alt[i1]-rmean[:192*3])[::-1],\
                   (altCRS[aC[0][ind]]-rmeanCRS[0,:192*3][::-1]),zW_slice[ind,:192*3][::-1])
     zW_L.append(zw1[::-1]+dzw_env[:192*3])
 
-dictZ={"zKu":zKu_slice[200:3500],"zKa":zKa_slice[200:3500],\
-       "zW":np.array(zW_L),"time":time[a[0][200:3500]],\
-       "rrange":rmean,"alt":alt[a[0][200:3500]],\
-       "lon":lon[a[0][200:3500]],"lat":lat[a[0][200:3500]]}
-pickle.dump(dictZ,open("z_obs_Feb05_22:00-22:06","wb"))
+dictZ={"zKu":zKu_slice[:],"zKa":zKa_slice[:],\
+       "zW":np.array(zW_L),"time":time[a[0][:]],\
+       "rrange":rmean,"alt":alt[a[0][:]],\
+       "lon":lon[a[0][:]],"lat":lat[a[0][:]]}
+pickle.dump(dictZ,open("z_obs_Jan25_21:10-21:19","wb"))
 stop
 zW_L=np.array(zW_L)
 rs=300
@@ -206,11 +228,7 @@ knn_zw=d["knn_zw"]
 knn_attw=d["knn_attw"]
 knn_attw2=d3["knn_attw"]
 
-plt.figure()
-plt.plot(lon[a[0][200:3500]],lat[a[0][200:3500]]+0.01)
-info1=np.array(info1)
-plt.plot(info1[:,1],info1[:,2])
-info2=np.array(info2)
+
 
 zku1d=[]
 zka1d=[]

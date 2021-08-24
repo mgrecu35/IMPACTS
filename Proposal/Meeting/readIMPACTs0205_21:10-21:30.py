@@ -2,8 +2,8 @@ from netCDF4 import *
 import matplotlib.pyplot as plt
 import numpy as np
 fname='/media/grecu/ExtraDrive1/IMPACTS/IMPACTS_HIWRAP_L1B_RevA_20200227T074338_to_20200227T142238.h5'
-fname='/media/grecu/ExtraDrive1/IMPACTS/IMPACTS2020_HIWRAP_L1B_RevB_20200205.h5'
-
+#fname='/media/grecu/ExtraDrive1/IMPACTS/IMPACTS2020_HIWRAP_L1B_RevB_20200205.h5'
+fname='/media/grecu/ExtraDrive1/IMPACTS/IMPACTS_HIWRAP_L1B_RevA_20200207T122221_to_20200207T180045.h5'
 fname_merra='https://goldsmr5.gesdisc.eosdis.nasa.gov/opendap/MERRA2/M2I3NPASM.5.12.4/2020/02/MERRA2_400.inst3_3d_asm_Np.20200205.nc4'
 import json
 import pickle
@@ -105,7 +105,7 @@ for i1 in zip(ap3[0]):
             zKu[i1,k]=24
 
 
-a=np.nonzero((time-21.7)*(time-22.2)<0)
+a=np.nonzero((time-21.15)*(time-21.5)<0)
 
 zKa_slice=zKa[a[0],:]+dz
 zKu_slice=zKu[a[0],:]+dz
@@ -116,38 +116,44 @@ nx=zKa_slice.shape[0]
 lon_a=lon[a[0]]
 lat_a=lat[a[0]]
 
-a1=np.nonzero(zKu_slice[900:1900,300:(192*3-35)]>30)
-for i1,j1 in zip(a1[0],a1[1]):
-    zKu_slice[i1+900,j1+300]=30
+#a1=np.nonzero(zKu_slice[900:1900,300:(192*3-35)]>30)
+#for i1,j1 in zip(a1[0],a1[1]):
+#    zKu_slice[i1+900,j1+300]=30
 
 
 plt.subplot(111)
 plt.pcolormesh(time[a[0]],hm-rmean[:192*3],(zKu_slice[:,:192*3]-zKa_slice[:,:192*3]).T,cmap='jet',vmin=0,vmax=10)
-plt.xlim(time[a[0][1050]],time[a[0][3500]])
+plt.xlim(time[a[0][0]],time[a[0][-1]])
 plt.title('Observed DFR\n 05 February 2020')
 plt.ylim(0,8000)
 plt.colorbar()
 
 from getFlightLine import getinfo
-t1,t2=21.7,22.15
+t1,t2=21.15,21.5
 info1,info2=getinfo(t1,t2)
 
 plt.figure(figsize=(8,12))
 plt.subplot(211)
 plt.pcolormesh(time[a[0]],hm-rmean[300:(192*3-35)],(zKu_slice[:,300:(192*3-35)]).T,cmap='jet',vmin=0,vmax=30)
-plt.xlim(time[a[0][1050]],time[a[0][3500]])
+plt.xlim(time[a[0][0]],time[a[0][-1]])
 plt.title('Observed Ku  reflectivity\n 05 February 2020')
-plt.plot([21.952,21.964],[3300,3300])
 plt.ylim(0,8000)
 plt.colorbar()
 plt.subplot(212)
 plt.pcolormesh(time[a[0]],hm-rmean[300:(192*3-35)],(zKa_slice[:,300:(192*3-35)]).T,cmap='jet',vmin=0,vmax=30)
-plt.xlim(time[a[0][1050]],time[a[0][3500]])
+plt.xlim(time[a[0][0]],time[a[0][-1]])
 plt.title('Observed Ka  reflectivity')
 plt.ylim(0,8000)
 plt.colorbar()
-stop
-#stop
+
+
+plt.figure()
+plt.plot(lon[a[0][:]],lat[a[0][:]]+0.01)
+info1=np.array(info1)
+plt.plot(info1[:,1],info1[:,2])
+info2=np.array(info2)
+
+
 
 
 
@@ -164,7 +170,7 @@ lonCRS=fCRS['Navigation/Data/Longitude']
 altCRS=fCRS['Navigation/Data/Height']
 rrangeCRS=fCRS['/Products/Information/Range']
 timeCRS=(fCRS['Time/Data/TimeUTC'][:]-dt)/3600.
-aC=np.nonzero((timeCRS[:,0]-21.7)*(timeCRS[:,0]-22.2)<0)
+aC=np.nonzero((timeCRS[:,0]-21.14)*(timeCRS[:,0]-21.51)<0)
 hmCRS=altCRS[a[0]].mean()
 rmeanCRS=rrangeCRS[:]
 zW_slice=zW[aC[0],:]
@@ -174,17 +180,17 @@ zwm1=np.zeros((54),float)
 zwm2=np.zeros((54),float)
 count=np.zeros((54),float)
 zW_L=[]
-for i1 in a[0][200:3500]:
+for i1 in a[0][:]:
     ind=np.argmin(abs(timeCRS[aC[0]]-time[i1]))
     zw1=np.interp((alt[i1]-rmean[:192*3])[::-1],\
                   (altCRS[aC[0][ind]]-rmeanCRS[0,:192*3][::-1]),zW_slice[ind,:192*3][::-1])
     zW_L.append(zw1[::-1]+dzw_env[:192*3])
 
-dictZ={"zKu":zKu_slice[200:3500],"zKa":zKa_slice[200:3500],\
-       "zW":np.array(zW_L),"time":time[a[0][200:3500]],\
-       "rrange":rmean,"alt":alt[a[0][200:3500]],\
-       "lon":lon[a[0][200:3500]],"lat":lat[a[0][200:3500]]}
-pickle.dump(dictZ,open("z_obs_Feb05_22:00-22:06","wb"))
+dictZ={"zKu":zKu_slice[:],"zKa":zKa_slice[:],\
+       "zW":np.array(zW_L),"time":time[a[0][:]],\
+       "rrange":rmean,"alt":alt[a[0][:]],\
+       "lon":lon[a[0][:]],"lat":lat[a[0][:]]}
+pickle.dump(dictZ,open("z_obs_Feb05_21:09-21:30","wb"))
 stop
 zW_L=np.array(zW_L)
 rs=300
@@ -206,11 +212,7 @@ knn_zw=d["knn_zw"]
 knn_attw=d["knn_attw"]
 knn_attw2=d3["knn_attw"]
 
-plt.figure()
-plt.plot(lon[a[0][200:3500]],lat[a[0][200:3500]]+0.01)
-info1=np.array(info1)
-plt.plot(info1[:,1],info1[:,2])
-info2=np.array(info2)
+
 
 zku1d=[]
 zka1d=[]
