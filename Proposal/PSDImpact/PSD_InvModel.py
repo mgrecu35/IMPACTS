@@ -7,7 +7,6 @@ import numpy as np
 PSDs=fh["Nc"][:]
 Z=fh["Z_sim"][:]
 iwc=fh["iwc"][:]
-dZ=fh["dZ"][:]
 Nc=fh["Nc"][:]
 Dm=fh['Dm'][:]
 Nw=4**4/np.pi*iwc/(0.1*Dm)**4/1e6
@@ -33,6 +32,7 @@ X_test=Xs[b[0],:]
 y_train=Ys[a[0],:]
 y_test=Ys[b[0],:]
 
+#stop
 import tensorflow as tf
 import tensorflow.keras as keras
 Keras = keras.backend
@@ -48,11 +48,28 @@ def iwc_model(n1,n2):
     model = keras.models.Model(
         inputs=[input1], outputs=[output])
     return model
+
+def iwc_modelM(n1,n2):
+    input1 = keras.layers.Input(shape=[n1])
+    z = keras.layers.Dense(8, activation="relu")(input1)
+    z = keras.layers.Dropout(0.1) (z)
+    z = keras.layers.Dense(16, activation="relu")(z)
+    z = keras.layers.Dropout(0.1)(z)
+    z = keras.layers.Dense(16, activation="relu")(z)
+    z = keras.layers.Dropout(0.1)(z)
+    #z = keras.layers.Dense(6, activation="relu")(z)
+    z = keras.layers.Dense(n2)(z)
+    #output = K.abs(z)
+    output=z
+    model = keras.models.Model(
+        inputs=[input1], outputs=[output])
+    return model
+
 itrain=1
 if itrain==1:
-    model=iwc_model(3,4)
+    model=iwc_modelM(3,4)
     model.compile(optimizer=tf.keras.optimizers.Adam(),  \
-                  loss='mse',\
+                  loss='mae',\
                   metrics=[tf.keras.metrics.MeanSquaredError()])
     
     history = model.fit(y_train[:,:], X_train, batch_size=32,epochs=30,
@@ -63,9 +80,9 @@ else:
     model=tf.keras.models.load_model("DFR_InvModel.h5")
     
 import pickle
-pickle.dump({"InputScaler":scalerX,"OutputScaler":scalerY},open("zDFR_OutputScaler.pklz","wb"))
+pickle.dump({"InputScaler":scalerX,"OutputScaler":scalerY},open("iwcScalers.pklz","wb"))
 
-
+stop
 #A=inv(K.T*inv(Se)*K+inv(Sa))*(K.T*inv(Se)*K)
 
 #stop

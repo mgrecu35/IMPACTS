@@ -115,7 +115,7 @@ def calcProp(Nbins,ds,mass_av,vol_av,dbinsM,K2r,xf1,xf2,xf3,K2,ik,gradZ,graddm,g
     graddm[42]=sum((Nbins+dNbins)*ds*mass_av[:,ik+1]*dbinsM)/sum((Nbins+dNbins)*ds*mass_av[:,ik+1])
     gradrho[42]=sum((Nbins+dNbins)*ds*mass_av[:,ik+1])/sum((Nbins+dNbins)*ds*vol_av[:,ik+1])
         
-    for i in range(42):
+    for i in range(-42):
         dNbins*=0
         dNbins[i]=Nbins[i]*0.1
         gradZ[i,0]=log10(sum((Nbins+dNbins)*1e-6*ds*sback13[:,ik]/K2))*10.
@@ -229,6 +229,9 @@ gradrhoLx=xr.DataArray(gradrhoL,dims=['dim_0','n43'])
 
 ds=xr.Dataset({"Nc":ncLx,"tempC":tempLx,"Z_sim":zLx,"kext":kextLx,"rho":rhoLx,"Dm":dmLx,"iwc":iwcLx,"diwc":gradiwcLx,\
               "ddm":graddmLx,"drho":gradrhoLx,"dZ":gradZLx})
+
+ds=xr.Dataset({"Nc":ncLx,"tempC":tempLx,"Z_sim":zLx,"kext":kextLx,"rho":rhoLx,"Dm":dmLx,\
+               "iwc":iwcLx})
 
 comp = dict(zlib=True, complevel=5)
 encoding = {var: comp for var in ds.variables}
